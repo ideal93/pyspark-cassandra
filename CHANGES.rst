@@ -2,8 +2,8 @@
 CHANGES
 =======
 
-0.11.1 (unreleased)
--------------------
+2.3.0 (2019-08-06)
+------------------
 
 * Python3 support for development / tests. Deprecate Python 2.7
 
