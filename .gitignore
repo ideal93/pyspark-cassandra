@@ -1,6 +1,8 @@
 # maven / sbt
 target
 .cache*
+.DS_Store
+.history
 
 # python
 *.pyc

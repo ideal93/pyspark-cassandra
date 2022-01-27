@@ -18,7 +18,7 @@ import java.io.OutputStream
 import java.nio.ByteBuffer
 import java.util.UUID
 
-import com.datastax.driver.core.{UDTValue => DriverUDTValue}
+import com.datastax.oss.driver.api.core.data.{UdtValue => DriverUDTValue}
 import com.datastax.spark.connector.UDTValue
 import com.datastax.spark.connector.types.TypeConverter
 import net.razorvine.pickle.{IObjectPickler, Opcodes, Pickler, Unpickler}
@@ -71,9 +71,7 @@ object DriverUDTValuePickler extends StructPickler {
 
   def values(o: Any, fields: Seq[_]) = {
     val v = o.asInstanceOf[DriverUDTValue]
-    v.getType().map {
-      field => v.getObject(field.getName)
-    }.toList
+    v.getType.getFieldNames.map(v.getUdtValue).toList
   }
 }
 

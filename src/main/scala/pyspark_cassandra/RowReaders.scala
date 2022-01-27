@@ -14,7 +14,7 @@
 
 package pyspark_cassandra
 
-import com.datastax.driver.core.{Row => DriverRow}
+import com.datastax.oss.driver.api.core.cql.{Row => DriverRow}
 import com.datastax.spark.connector.cql.TableDef
 import com.datastax.spark.connector.rdd.reader.{RowReader, RowReaderFactory}
 import com.datastax.spark.connector.{CassandraRowMetadata, ColumnRef, GettableData}

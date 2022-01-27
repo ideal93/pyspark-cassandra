@@ -14,8 +14,8 @@
 
 package pyspark_cassandra
 
-import java.lang.Boolean
 import java.util.{Map => JMap}
+import java.lang.{Boolean => JBoolean}
 
 import com.datastax.spark.connector._
 import com.datastax.spark.connector.rdd._
@@ -75,7 +75,7 @@ class PythonHelper() extends Serializable {
   /* rdds ------------------------------------------------------------------ */
 
   def saveToCassandra(rdd: JavaRDD[Array[Byte]], keyspace: String, table: String, columns: JMap[String, String],
-                      rowFormat: Integer, keyed: Boolean, writeConf: JMap[String, Any]) = {
+                      rowFormat: Integer, keyed: JBoolean, writeConf: JMap[String, Any]) = {
 
     val selectedColumns = columnSelector(columns)
     val conf = parseWriteConf(Some(writeConf))
@@ -85,7 +85,7 @@ class PythonHelper() extends Serializable {
   }
 
   def saveToCassandra(rdd: JavaRDD[Array[Byte]], keyspace: String, table: String, columns: Array[String],
-                      rowFormat: Integer, keyed: Boolean, writeConf: JMap[String, Any]) = {
+                      rowFormat: Integer, keyed: JBoolean, writeConf: JMap[String, Any]) = {
 
     val selectedColumns = columnSelector(columns)
     val conf = parseWriteConf(Some(writeConf))
@@ -97,7 +97,7 @@ class PythonHelper() extends Serializable {
   /* dstreams -------------------------------------------------------------- */
 
   def saveToCassandra(dstream: JavaDStream[Array[Byte]], keyspace: String, table: String, columns: Array[String],
-                      rowFormat: Integer, keyed: Boolean, writeConf: JMap[String, Any]) = {
+                      rowFormat: Integer, keyed: JBoolean, writeConf: JMap[String, Any]) = {
 
     val selectedColumns = columnSelector(columns)
     val conf = parseWriteConf(Some(writeConf))
@@ -141,7 +141,7 @@ class PythonHelper() extends Serializable {
 
   def deleteFromCassandra(rdd: JavaRDD[Array[Byte]], keyspace: String, table: String,
                           deleteColumns: Array[String], keyColumns: Array[String],
-                          rowFormat: Integer, keyed: Boolean,
+                          rowFormat: Integer, keyed: java.lang.Boolean,
                           writeConf: JMap[String, Any]) = {
     val deletes = columnSelector(deleteColumns, SomeColumns())
     val keys = columnSelector(keyColumns, PrimaryKeyColumns)
@@ -154,7 +154,7 @@ class PythonHelper() extends Serializable {
 
   def deleteFromCassandra(dstream: JavaDStream[Array[Byte]], keyspace: String, table: String,
                           deleteColumns: Array[String], keyColumns: Array[String],
-                          rowFormat: Integer, keyed: Boolean,
+                          rowFormat: Integer, keyed: java.lang.Boolean,
                           writeConf: JMap[String, Any]) = {
     val deletes = columnSelector(deleteColumns, SomeColumns())
     val keys = columnSelector(keyColumns, PrimaryKeyColumns)
@@ -173,13 +173,13 @@ class PythonHelper() extends Serializable {
   def pickleRows(rdd: CassandraRDD[UnreadRow], rowFormat: Integer): RDD[Array[Byte]] =
     pickleRows(rdd, rowFormat, false)
 
-  def pickleRows(rdd: CassandraRDD[UnreadRow], rowFormat: Integer, keyed: Boolean) = {
+  def pickleRows(rdd: CassandraRDD[UnreadRow], rowFormat: Integer, keyed: java.lang.Boolean) = {
     // TODO implement keying by arbitrary columns, analogues to the spanBy(...) and spark-cassandra-connector
     val parser = Format.parser(Format(rowFormat), asBooleanOption(keyed))
     rdd.map(parser).pickle()
   }
 
-  def pickleRows(rdd: CassandraJoinRDD[Any, UnreadRow], rowFormat: Integer, keyed: Boolean): RDD[Array[Byte]] =
+  def pickleRows(rdd: CassandraJoinRDD[Any, UnreadRow], rowFormat: Integer, keyed: java.lang.Boolean): RDD[Array[Byte]] =
     pickleRows(rdd)
 
   def pickleRows(rdd: CassandraJoinRDD[Any, UnreadRow], rowFormat: Integer): RDD[Array[Byte]] =

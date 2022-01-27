@@ -16,7 +16,7 @@ package pyspark_cassandra
 
 import java.util.{Map => JMap}
 
-import com.datastax.driver.core.ConsistencyLevel
+import com.datastax.oss.driver.api.core.{ConsistencyLevel, DefaultConsistencyLevel}
 import com.datastax.spark.connector._
 import com.datastax.spark.connector.rdd._
 import com.datastax.spark.connector.writer._
@@ -65,8 +65,8 @@ object Utils {
             case ("split_count", v: Int) => conf = conf.copy(splitCount = Option(v))
             case ("split_size", v: Int) => conf = conf.copy(splitSizeInMB = v)
             case ("fetch_size", v: Int) => conf = conf.copy(fetchSizeInRows = v)
-            case ("consistency_level", v: Int) => conf = conf.copy(consistencyLevel = ConsistencyLevel.values()(v))
-            case ("consistency_level", v) => conf = conf.copy(consistencyLevel = ConsistencyLevel.valueOf(v.toString))
+            case ("consistency_level", v: Int) => conf = conf.copy(consistencyLevel = DefaultConsistencyLevel.values()(v))
+            case ("consistency_level", v) => conf = conf.copy(consistencyLevel = DefaultConsistencyLevel.valueOf(v.toString))
             case ("metrics_enabled", v: Boolean) => conf = conf.copy(taskMetricsEnabled = v)
             case _ => throw new IllegalArgumentException(s"Read conf key $k with value $v unsupported")
           }
@@ -88,10 +88,10 @@ object Utils {
             case ("batch_buffer_size", v: Int) => conf = conf.copy(batchGroupingBufferSize = v)
             case ("batch_grouping_key", "replica_set") => conf = conf.copy(batchGroupingKey = BatchGroupingKey.ReplicaSet)
             case ("batch_grouping_key", "partition") => conf = conf.copy(batchGroupingKey = BatchGroupingKey.ReplicaSet)
-            case ("consistency_level", v: Int) => conf = conf.copy(consistencyLevel = ConsistencyLevel.values()(v))
-            case ("consistency_level", v) => conf = conf.copy(consistencyLevel = ConsistencyLevel.valueOf(v.toString))
+            case ("consistency_level", v: Int) => conf = conf.copy(consistencyLevel = DefaultConsistencyLevel.values()(v))
+            case ("consistency_level", v) => conf = conf.copy(consistencyLevel = DefaultConsistencyLevel.valueOf(v.toString))
             case ("parallelism_level", v: Int) => conf = conf.copy(parallelismLevel = v)
-            case ("throughput_mibps", v: Number) => conf = conf.copy(throughputMiBPS = v.doubleValue())
+            case ("throughput_mibps", v: Number) => conf = conf.copy(throughputMiBPS = Option(v.doubleValue()))
             case ("ttl", v: Int) => conf = conf.copy(ttl = TTLOption.constant(v))
             case ("timestamp", v: Number) => conf = conf.copy(timestamp = TimestampOption.constant(v.longValue()))
             case ("metrics_enabled", v: Boolean) => conf = conf.copy(taskMetricsEnabled = v)

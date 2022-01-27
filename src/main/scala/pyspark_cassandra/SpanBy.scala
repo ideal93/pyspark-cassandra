@@ -14,12 +14,13 @@
 
 package pyspark_cassandra
 
-import com.datastax.driver.core.DataType
-import com.datastax.spark.connector.{GettableData, toRDDFunctions}
+import com.datastax.oss.driver.api.core.`type`.DataType
+import com.datastax.spark.connector.{toRDDFunctions, GettableData}
 import org.apache.spark.rdd.RDD
-
-import scala.collection.JavaConversions.asScalaBuffer
+import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
+
+import com.datastax.oss.protocol.internal.ProtocolConstants
 
 case class DataFrame(names: Array[String], types: Array[String], values: Seq[ArrayBuffer[Any]])
 
@@ -32,10 +33,8 @@ object SpanBy {
     spanned.map {
       case (k, rows) => {
         // get the columns for the data frame (so excluding the ones spanned by)
-        val colDefs = rows.head.row.getColumnDefinitions.asList()
-        val colTypesWithIdx = colDefs.map {
-          d => d.getType
-        }.zipWithIndex.filter {
+        val colDefs = rows.head.row.getColumnDefinitions.asScala
+        val colTypesWithIdx = colDefs.zipWithIndex.filter {
           case (c, i) => columns.contains(c.getName)
         }
 
@@ -45,19 +44,19 @@ object SpanBy {
         }
 
         // transpose the rows in to columns and 'deserialize'
-        val df = colDefs.map { x => new ArrayBuffer[Any] }
+        val df = colDefs.map { _ => new ArrayBuffer[Any] }.toArray
         for {
           row <- rows
           (ct, i) <- colTypesWithIdx
         } {
-          df(i) += deserialize(row, ct, i)
+          df(i) += deserialize(row, ct.getType, i)
         }
 
         // list the numpy types of the columns in the span (i.e. the non-key columns)
-        val numpyTypes = colTypesWithIdx.map { case (c, i) => numpyType(c).getOrElse(null) }
+        val numpyTypes = colTypesWithIdx.map { case (c, i) => numpyType(c.getType).getOrElse(null) }
 
         // return the key and 'dataframe container'
-        (deserializedKey, new DataFrame(columns, numpyTypes.toArray, df))
+        (deserializedKey, new DataFrame(columns, numpyTypes.toArray, df.toSeq))
       }
     }
   }
@@ -86,14 +85,14 @@ object SpanBy {
 
   /** Provides a Numpy type string for every Cassandra type supported. */
   private def numpyType(dataType: DataType) = {
-    Option(dataType.getName match {
-      case DataType.Name.BOOLEAN => ">b1"
-      case DataType.Name.INT => ">i4"
-      case DataType.Name.BIGINT => ">i8"
-      case DataType.Name.COUNTER => ">i8"
-      case DataType.Name.FLOAT => ">f4"
-      case DataType.Name.DOUBLE => ">f8"
-      case DataType.Name.TIMESTAMP => ">M8[ms]"
+    Option(dataType.getProtocolCode match {
+      case ProtocolConstants.DataType.BOOLEAN => ">b1"
+      case ProtocolConstants.DataType.INT => ">i4"
+      case ProtocolConstants.DataType.BIGINT => ">i8"
+      case ProtocolConstants.DataType.COUNTER => ">i8"
+      case ProtocolConstants.DataType.FLOAT => ">f4"
+      case ProtocolConstants.DataType.DOUBLE => ">f8"
+      case ProtocolConstants.DataType.TIMESTAMP => ">M8[ms]"
       case _ => null
     })
   }

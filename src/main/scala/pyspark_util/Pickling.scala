@@ -19,15 +19,13 @@ import java.math.BigInteger
 import java.net.{Inet4Address, Inet6Address, InetAddress}
 import java.nio.ByteBuffer
 import java.nio.channels.Channels
-import java.util.{Collection, HashMap, UUID, Map => JMap, Date}
+import java.time.LocalDate
+import java.util.{Collection, Date, HashMap, UUID, Map => JMap}
 
 import net.razorvine.pickle._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.streaming.dstream.DStream
 import pyspark_util.Conversions._
-
- import com.datastax.driver.core.LocalDate
-
 import scala.collection.JavaConversions._
 import scala.collection.convert.Wrappers.{JListWrapper, JMapWrapper, JSetWrapper}
 import scala.collection.immutable.HashMap.HashTrieMap
@@ -61,8 +59,9 @@ class Pickling extends Serializable {
 
     Pickler.registerCustomPickler(classOf[UUID], UUIDPickler)
     Pickler.registerCustomPickler(classOf[UUIDHolder], UUIDPickler)
-    Pickler.registerCustomPickler(classOf[org.joda.time.LocalDate], JodaLocalDatePickler) 
-    Pickler.registerCustomPickler(classOf[com.datastax.driver.core.LocalDate], DatastaxLocalDatePickler) 
+    Pickler.registerCustomPickler(classOf[org.joda.time.LocalDate], JodaLocalDatePickler)
+    // https://docs.datastax.com/en/developer/java-driver/4.5/manual/core/temporal_types/
+    Pickler.registerCustomPickler(classOf[java.time.LocalDate], DatastaxLocalDatePickler)
     Pickler.registerCustomPickler(classOf[InetAddress], AsStringPickler)
     Pickler.registerCustomPickler(classOf[Inet4Address], AsStringPickler)
     Pickler.registerCustomPickler(classOf[Inet6Address], AsStringPickler)
@@ -188,10 +187,10 @@ object DatastaxLocalDatePickler extends IObjectPickler {
     out.write("datetime\ndate\n".getBytes());
     // python itself uses the constructor with a single timestamp byte string of len 4,
     // we take the easy way out and just provide 3 ints (year/month/day)
-    val date = o.asInstanceOf[com.datastax.driver.core.LocalDate]
+    val date = o.asInstanceOf[java.time.LocalDate]
     pickler.save(date.getYear());
     pickler.save(date.getMonth());    // months start at 0 in java
-    pickler.save(date.getDay());
+    pickler.save(date.getDayOfMonth());
     out.write(Opcodes.TUPLE3);
     out.write(Opcodes.REDUCE);
   }
@@ -219,7 +218,7 @@ object CassandraLocalDateUnpickler extends IObjectConstructor {
         val year = args(0).asInstanceOf[Int]
         val month = args(1).asInstanceOf[Int]
         val day = args(2).asInstanceOf[Int]
-        LocalDate.fromYearMonthDay(year, month, day)
+        LocalDate.of(year, month, day)
       }
       case 1 => args(0) match {
         case params: String => {
@@ -230,7 +229,7 @@ object CassandraLocalDateUnpickler extends IObjectConstructor {
           val ylo = params(1)
           val month = params(2)
           val day = params(3)
-          LocalDate.fromYearMonthDay(yhi * 256 + ylo, month, day)
+          LocalDate.of(yhi * 256 + ylo, month, day)
         }
         case _ => {
           val params = args(0).asInstanceOf[Array[Byte]]
@@ -240,7 +239,7 @@ object CassandraLocalDateUnpickler extends IObjectConstructor {
           val ylo = params(1)&0xff
           val month = (params(2)&0xff) // blargh: months start at 0 in java
           val day = params(3)&0xff
-          val date = LocalDate.fromYearMonthDay(yhi * 256 + ylo, month, day)
+          val date = LocalDate.of(yhi * 256 + ylo, month, day)
           date
         }
       }
