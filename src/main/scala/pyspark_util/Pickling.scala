@@ -53,6 +53,7 @@ class Pickling extends Serializable {
 
   implicit def toUnpickleableStream(dstream: DStream[Array[Byte]]) = new UnpicklableDStream(dstream)
 
+  // scalastyle:off
   def register() {
     Unpickler.registerConstructor("uuid", "UUID", UUIDUnpickler)
     Unpickler.registerConstructor("datetime", "date", CassandraLocalDateUnpickler)
@@ -115,6 +116,8 @@ class Pickling extends Serializable {
     Pickler.registerCustomPickler(classOf[HashTrieMap[_, _]], MapPickler)
     Pickler.registerCustomPickler(classOf[JMapWrapper[_, _]], MapPickler)
   }
+
+  // scalastyle:on
 }
 
 object Pickling extends Pickling
@@ -189,7 +192,7 @@ object DatastaxLocalDatePickler extends IObjectPickler {
     // we take the easy way out and just provide 3 ints (year/month/day)
     val date = o.asInstanceOf[java.time.LocalDate]
     pickler.save(date.getYear());
-    pickler.save(date.getMonth());    // months start at 0 in java
+    pickler.save(date.getMonth()); // months start at 0 in java
     pickler.save(date.getDayOfMonth());
     out.write(Opcodes.TUPLE3);
     out.write(Opcodes.REDUCE);
@@ -204,7 +207,7 @@ object JodaLocalDatePickler extends IObjectPickler {
     // we take the easy way out and just provide 3 ints (year/month/day)
     val date = o.asInstanceOf[org.joda.time.LocalDate]
     pickler.save(date.getYear());
-    pickler.save(date.getMonthOfYear());    // months start at 0 in java
+    pickler.save(date.getMonthOfYear()); // months start at 0 in java
     pickler.save(date.getDayOfMonth());
     out.write(Opcodes.TUPLE3);
     out.write(Opcodes.REDUCE);
@@ -222,8 +225,11 @@ object CassandraLocalDateUnpickler extends IObjectConstructor {
       }
       case 1 => args(0) match {
         case params: String => {
-          if (params.size != 4)
-            throw new PickleException("invalid pickle data for date; expected arg of length 4, got length "+params.size)
+          if (params.size != 4) {
+            throw new PickleException(
+              "invalid pickle data for date; expected arg of length 4, got length " + params.size
+            )
+          }
 
           val yhi = params(0)
           val ylo = params(1)
@@ -233,17 +239,20 @@ object CassandraLocalDateUnpickler extends IObjectConstructor {
         }
         case _ => {
           val params = args(0).asInstanceOf[Array[Byte]]
-          if (params.size != 4)
-            throw new PickleException("invalid pickle data for date; expected arg of length 4, got length "+params.size)
-          val yhi = params(0)&0xff
-          val ylo = params(1)&0xff
-          val month = (params(2)&0xff) // blargh: months start at 0 in java
-          val day = params(3)&0xff
+          if (params.size != 4) {
+            throw new PickleException(
+              "invalid pickle data for date; expected arg of length 4, got length " + params.size
+            )
+          }
+          val yhi = params(0) & 0xff
+          val ylo = params(1) & 0xff
+          val month = (params(2) & 0xff) // blargh: months start at 0 in java
+          val day = params(3) & 0xff
           val date = LocalDate.of(yhi * 256 + ylo, month, day)
           date
         }
       }
-      case _ => throw new PickleException("invalid pickle data for date; expected 1 arg, got "+args.size)
+      case _ => throw new PickleException("invalid pickle data for date; expected 1 arg, got " + args.size)
     }
   }
 }

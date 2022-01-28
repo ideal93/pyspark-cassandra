@@ -4,6 +4,8 @@ SCALA_TARGET_VERSION=2.12
 CASSANDRA_VERSION ?= 3.11.4
 PYTHON=python3
 PIP=pip3
+JAR_NAME=pyspark-cassandra_$(SCALA_TARGET_VERSION)-${VERSION}.jar
+SHADED_JAR_NAME=pyspark-cassandra_$(SCALA_TARGET_VERSION)-${VERSION}-shaded.jar
 all:;: '$(CASSANDRA_VERSION)'
 
 .PHONY: clean clean-pyc clean-dist dist test-travis
@@ -16,7 +18,7 @@ clean-pyc:
 	find . -name '*~' -exec rm -f {} +
 	find . -name '__pycache__' -exec rm -fr {} +
 
-clean-dist:
+ clean-dist:
 	rm -rf target
 	rm -rf python/build/
 	rm -rf python/*.egg-info
@@ -68,7 +70,7 @@ test-integration-spark-3.1.2:
 define test-integration-for-version
 	echo ======================================================================
 	echo testing integration with spark-$1
-	
+	cd python && python setup.py install
 	mkdir -p lib && test -d lib/spark-$1-bin-$2 || \
 		(pushd lib && curl https://archive.apache.org/dist/spark/spark-$1/spark-$1-bin-$2.tgz | tar xz && popd)
 	
@@ -80,15 +82,15 @@ define test-integration-for-version
 			--driver-memory 512m \
 			--packages com.datastax.spark:spark-cassandra-connector_2.12:3.1.0 \
 			--conf spark.cassandra.connection.host="localhost" \
-			--jars target/pyspark-cassandra_2.12-3.1.0-shaded.jar \
-			--py-files target/pyspark-cassandra_2.12-3.1.0-shaded.jar \
+			--jars target/${SHADED_JAR_NAME} \
+			--py-files target/${SHADED_JAR_NAME} \
 			python/tests.py
 			
 	echo ======================================================================
 endef
 
 dist: clean-pyc
-	mvn -DskipTests clean package -P "Shade Package"
+	mvn -DskipTests clean package
 	cd python ; \
 		find . -mindepth 2 -name '*.py' -print | \
 		zip ../target/pyspark-cassandra_2.12-$(VERSION).jar -@
@@ -98,19 +100,16 @@ all: clean lint dist
 publish: clean
 	# use spark packages to create the distribution
 	mvn -DskipTests clean package
-
 	# push the python source files into the jar
 	cd python ; \
 		find . -mindepth 2 -name '*.py' -print | \
-		zip ../target/pyspark-cassandra_2.12-$(VERSION).jar -@
+		zip ../target/${JAR_NAME} -@
 
 	# copy it to the right name, and update the jar in the zip
-	cp target/pyspark-cassandra{_$(SCALA_TARGET_VERSION),}-$(VERSION).jar
+	cp target/${JAR_NAME}
 	cd target/;\
 		zip ../pyspark-cassandra-$(VERSION).zip pyspark-cassandra-$(VERSION).jar
 
-	# send the package to spark-packages
-	spark-package publish -c ".sp-creds.txt"  -n "anguenot/pyspark-cassandra" -v "$(VERSION)" -f . -z target/pyspark-cassandra_2.12-$(VERSION).zip
 
 lint: python-tox scala-style
 
@@ -118,7 +117,7 @@ python-tox: ## check style with flake8
 	tox
 
 scala-style: ## check style with scalastyle
-	sbt -batch scalastyle
+	mvn verify
 
 release-staging: clean ## package and upload a release to staging PyPi
 	cd python && $(PYTHON) setup.py sdist bdist_wheel
