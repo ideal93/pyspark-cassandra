@@ -93,7 +93,7 @@ dist: clean-pyc
 	mvn -DskipTests clean package
 	cd python ; \
 		find . -mindepth 2 -name '*.py' -print | \
-		zip ../target/pyspark-cassandra_2.12-$(VERSION).jar -@
+		zip ../target/${SHADED_JAR_NAME} -@
 
 all: clean lint dist
 
